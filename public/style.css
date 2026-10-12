@@ -236,12 +236,5 @@ progress { width: 100%; height: 8px; margin-top: 12px; accent-color: var(--tx-te
 .page-card { cursor: default; }
 #thumbs { margin-top: 4px; }
 
-/* ヒーロー右の図：カルーセルのイメージ */
-.mock-carousel { min-height: 236px; display: flex; flex-direction: column; justify-content: center; gap: 22px; background: #f4f5f7; padding: 22px 8px; overflow: hidden; }
-.mock-slides { display: flex; align-items: center; justify-content: center; gap: 12px; }
-.mock-slide { flex: none; border-radius: 8px; background: #d7dade; box-shadow: var(--tx-shadow-sm); aspect-ratio: 16/9; }
-.mock-slide.main { width: 46%; background: #b9bfc7; transform: scale(1.12); box-shadow: var(--tx-shadow-md); }
-.mock-slide.side { width: 36%; opacity: .55; }
-.mock-dots { display: flex; justify-content: center; gap: 7px; }
-.mock-dots i { width: 7px; height: 7px; border-radius: 50%; background: #c9ccd2; }
-.mock-dots i.on { background: var(--tx-text); }
+/* ヒーロー右の図：選んだスタイルで流れる小さなプレビュー(見本スライド・本体と同じ描画関数) */
+.mock-video { display: block; width: 100%; height: auto; border-radius: 10px; box-shadow: var(--tx-shadow-sm); background: #f4f5f7; }

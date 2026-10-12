@@ -3,7 +3,7 @@ import { Muxer, ArrayBufferTarget } from "./vendor/mp4-muxer/mp4-muxer.mjs";
 const X_MAX_SEC = 140, X_MAX_BYTES = 512 * 1024 * 1024;
 const PDF_MAX_PAGES = 200, BITMAP_W = 1920;
 const $ = id => document.getElementById(id);
-const cv = $("cv"), ctx = cv.getContext("2d");
+let cv = $("cv"), ctx = cv.getContext("2d");   // 見本プレビュー(drawOn)の間だけ一時的に差し替える
 let slides = [];   // {bitmap, thumb, name}
 let playing = false, playStart = 0, raf = 0;
 
@@ -337,5 +337,40 @@ $("styleGrid").addEventListener("click", e => {
   document.getElementById("cardOverlay").hidden = b.dataset.style === "carousel";
   refresh();
 });
+// ---------- ヒーロー右の見本プレビュー ----------
+// 本体と同じ drawFrame を、見本スライド・小さいキャンバスに向けて描く(グローバルを一時的に差し替える)
+function drawOn(canvas, list, t, o){
+  const keep = [cv, ctx, slides];
+  cv = canvas; ctx = canvas.getContext("2d"); slides = list;
+  try{ drawFrame(t, o); } finally { [cv, ctx, slides] = keep; }
+}
+function demoSlide(i){
+  const c = document.createElement("canvas"); c.width = 1600; c.height = 900;
+  const g = c.getContext("2d"), tone = ["#d7dade", "#c9d3df", "#dcd3cf"][i];
+  g.fillStyle = "#fff"; g.fillRect(0, 0, 1600, 900);
+  g.fillStyle = "#b93226"; g.fillRect(0, 0, 1600, 18);
+  g.fillStyle = "#b9bfc7"; g.beginPath(); g.roundRect(120, 130, 760, 70, 14); g.fill();
+  g.fillStyle = "#eceef1"; [0, 1, 2, 3].forEach(k => { g.beginPath(); g.roundRect(120, 290 + k * 95, [1180, 1040, 1240, 880][k], 46, 23); g.fill(); });
+  g.fillStyle = tone; g.beginPath(); g.roundRect(1080, 560, 400, 240, 20); g.fill();
+  g.fillStyle = "#71717a"; g.font = "700 110px system-ui, sans-serif"; g.textAlign = "right"; g.fillText(String(i + 1), 1490, 190);
+  return c;
+}
+const demo = [0, 1, 2].map(i => ({ bitmap: demoSlide(i) }));
+const mockCv = $("mockCv"), reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+function mockOpts(){
+  return { style: document.querySelector("#styleGrid .selected").dataset.style, W: 640, H: 360,
+    hold: 1.2, move: .9, bg: "#f4f5f7", fit: "cover", loopback: true, bar: true, counter: true };
+}
+let mockStart = performance.now();
+function mockTick(now){
+  const o = mockOpts(), total = demo.length * (o.hold + o.move);
+  const t = reduceMotion ? o.hold + o.move / 2 : ((now - mockStart) / 1000) % total;
+  drawOn(mockCv, demo, t, o);
+  if(!reduceMotion) requestAnimationFrame(mockTick);
+}
+// スタイルを切り替えたら、見本は最初の切り替わりがすぐ見える位置から流し直す
+$("styleGrid").addEventListener("click", () => { mockStart = performance.now() - 700; if(reduceMotion) mockTick(0); });
+requestAnimationFrame(mockTick);
+
 window.app = { addBitmap, refresh, drawFrame, opts, slides: () => slides };   // 動作確認用
 refresh();
