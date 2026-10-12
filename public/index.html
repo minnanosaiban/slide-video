@@ -14,7 +14,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="スライド動画メーカー">
 <meta name="twitter:description" content="画像やPDFから、Xに投稿できるスライド動画(MP4)をブラウザだけで。送信なし・ローカルで完結。">
-<link rel="stylesheet" href="style.css?v=2">
+<link rel="stylesheet" href="style.css?v=3">
 </head>
 <body>
 
@@ -38,6 +38,8 @@
         <div class="hero-theme-head"><span class="hero-theme-title">スタイル</span></div>
         <div class="theme-grid" id="styleGrid" role="tablist" aria-label="動画のスタイル">
           <button type="button" class="theme-swatch selected" role="tab" data-style="carousel">カルーセル</button>
+          <button type="button" class="theme-swatch" role="tab" data-style="curl">ページめくり</button>
+          <button type="button" class="theme-swatch" role="tab" data-style="toss">カード飛ばし</button>
           <button type="button" class="theme-swatch" role="tab" data-style="push">横スライド(全画面)</button>
           <button type="button" class="theme-swatch" role="tab" data-style="card">枠付き1枚</button>
           <button type="button" class="theme-swatch" role="tab" data-style="slide">フェード(全画面)</button>
@@ -101,6 +103,7 @@
       </div>
       <div class="toolbar" style="margin-top:12px">
         <label class="check"><input type="checkbox" id="loopback"> 最後に最初のスライドへ戻る(ループ再生向け)</label>
+        <label class="check" id="cardCaro"><input type="checkbox" id="dots"> ページ送りの点を出す(Webページ風)</label>
         <span id="cardOverlay" class="toolbar-group" hidden>
           <label class="check"><input type="checkbox" id="bar" checked> 進捗バーを出す</label>
           <label class="check"><input type="checkbox" id="counter" checked> ページ番号(3 / 23)を出す</label>
@@ -139,6 +142,6 @@
   </div>
 </footer>
 
-<script type="module" src="app.js?v=2"></script>
+<script type="module" src="app.js?v=3"></script>
 </body>
 </html>

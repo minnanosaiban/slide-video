@@ -76,7 +76,7 @@ function opts(){
   return {
     style: document.querySelector("#styleGrid .selected").dataset.style, W, H,
     hold: Math.max(.5, +$("hold").value || 3), move: Math.max(.2, +$("move").value || .7),
-    bg: $("bgc").value, fit: $("fit").value, loopback: $("loopback").checked, bar: $("bar").checked, counter: $("counter").checked,
+    bg: $("bgc").value, fit: $("fit").value, loopback: $("loopback").checked, dots: $("dots").checked, bar: $("bar").checked, counter: $("counter").checked,
   };
 }
 function totalDuration(o){
@@ -134,6 +134,44 @@ function drawFull(t, pos, o){
     if(f > 0 && (i + 1 < n || o.loopback)) draw(i + 1, f);
     return;
   }
+  if(o.style === "curl" || o.style === "toss"){
+    const k = Math.min(Math.floor(pos), n - 1), p = pos - k;
+    const nx = (k + 1 < n || o.loopback) ? (k + 1) % n : -1;
+    const cur = slides[k].bitmap;
+    if(p <= 0 || nx < 0){ drawImg(ctx, cur, 0, 0, W, H, o.fit, 0, false); return; }
+    const nb = slides[nx].bitmap;
+    if(o.style === "toss"){
+      // 手前の1枚が左へ傾きながら飛んでいき、下から次の1枚が少し大きくなって現れる
+      ctx.save(); ctx.translate(W / 2, H / 2); const s = .93 + .07 * p; ctx.scale(s, s); ctx.translate(-W / 2, -H / 2);
+      drawImg(ctx, nb, 0, 0, W, H, o.fit, 0, false); ctx.restore();
+      ctx.save(); ctx.translate(W / 2 - p * W * 1.15, H / 2 + p * H * .12); ctx.rotate(-p * .2);
+      ctx.shadowColor = "rgba(0,0,0,.3)"; ctx.shadowBlur = W * .03; ctx.shadowOffsetX = W * .008; ctx.fillStyle = o.bg; ctx.fillRect(-W / 2, -H / 2, W, H);
+      ctx.shadowColor = "transparent"; ctx.translate(-W / 2, -H / 2);
+      drawImg(ctx, cur, 0, 0, W, H, o.fit, 0, false); ctx.restore();
+      return;
+    }
+    // ページめくり: 右端から折り目が左へ進み、めくれた紙の裏側が折り目の左に見える
+    const f = W * (1 - p);
+    drawImg(ctx, nb, 0, 0, W, H, o.fit, 0, false);
+    let g = ctx.createLinearGradient(f, 0, f + W * .08, 0);   // 次ページに落ちる影
+    g.addColorStop(0, "rgba(0,0,0,.28)"); g.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = g; ctx.fillRect(f, 0, W * .08, H);
+    ctx.save(); ctx.beginPath(); ctx.rect(0, 0, f, H); ctx.clip();
+    drawImg(ctx, cur, 0, 0, W, H, o.fit, 0, false); ctx.restore();
+    const fw = Math.min(W - f, f);
+    if(fw > 0){
+      ctx.save(); ctx.beginPath(); ctx.rect(f - fw, 0, fw, H); ctx.clip();
+      ctx.translate(f, 0); ctx.scale(-1, 1); ctx.translate(-f, 0);
+      drawImg(ctx, cur, 0, 0, W, H, o.fit, 0, false); ctx.restore();
+      g = ctx.createLinearGradient(f - fw, 0, f, 0);   // 裏側の紙の陰影(折り目に近いほど明るい)
+      g.addColorStop(0, "rgba(0,0,0,.22)"); g.addColorStop(.85, "rgba(255,255,255,.25)"); g.addColorStop(1, "rgba(255,255,255,.55)");
+      ctx.fillStyle = g; ctx.fillRect(f - fw, 0, fw, H);
+      g = ctx.createLinearGradient(f - fw - W * .05, 0, f - fw, 0);   // めくれた紙の端の影
+      g.addColorStop(0, "rgba(0,0,0,0)"); g.addColorStop(1, "rgba(0,0,0,.2)");
+      if(f - fw > 0){ ctx.fillStyle = g; ctx.fillRect(f - fw - W * .05, 0, W * .05, H); }
+    }
+    return;
+  }
   // push(横にすっと押し出す)・card(枠付きの1枚が横に流れる)
   const card = o.style === "card", m = card ? Math.min(W, H) * .05 : 0;
   for(let i = 0; i < n; i++){
@@ -174,7 +212,7 @@ function drawFrame(t, o){
   // カルーセル(事件ページの見た目: 中央1.15倍・左右0.92倍で半透明、4.5秒ごとに右→左)
   const per = W >= H ? 2.2 : 1.3, gap = W * 0.025;
   const sw = (W - gap * (per - 1)) / per, sh = sw * 9 / 16;
-  const cy = H * .5;
+  const cy = H * (o.dots ? .47 : .5);
   const items = [];
   for(let i = 0; i < n; i++){
     let d = i - pos;
@@ -195,6 +233,14 @@ function drawFrame(t, o){
     ctx.shadowColor = "transparent";
     drawFit(ctx, slides[it.i].bitmap, cx - w / 2, cy - h / 2, w, h, o.fit, 14 * W / 1120);
     ctx.restore();
+  }
+  if(o.dots){   // ページ送りの点(Webページ風。多いときは30個に間引く)
+    const y = Math.min(H - W * .03, cy + sh * 1.15 / 2 + W * .045), r = W * .005, sp = r * 4;
+    const cur = Math.round(pos) % n, show = Math.min(n, 30), x0 = W / 2 - (show - 1) * sp / 2;
+    for(let i = 0; i < show; i++){
+      ctx.fillStyle = (n > 30 ? Math.floor(cur * 30 / n) : cur) === i ? "#b93226" : "#bdb8b0";
+      ctx.beginPath(); ctx.arc(x0 + i * sp, y, r, 0, Math.PI * 2); ctx.fill();
+    }
   }
 }
 
@@ -228,7 +274,7 @@ $("play").onclick = () => {
   };
   tick();
 };
-["size", "bar", "counter", "hold", "move", "bgc", "fit", "loopback"].forEach(id => $(id).addEventListener("change", refresh));
+["size", "dots", "bar", "counter", "hold", "move", "bgc", "fit", "loopback"].forEach(id => $(id).addEventListener("change", refresh));
 
 // ---------- 書き出し(WebCodecsでフレームごとにMP4へ) ----------
 async function pickCodec(W, H, fps, bitrate){
@@ -279,7 +325,8 @@ $("make").onclick = makeVideo;
 $("styleGrid").addEventListener("click", e => {
   const b = e.target.closest(".theme-swatch"); if(!b) return;
   document.querySelectorAll("#styleGrid .theme-swatch").forEach(x => x.classList.toggle("selected", x === b));
-  document.getElementById("cardOverlay").hidden = b.dataset.style === "carousel";
+  const caro = b.dataset.style === "carousel";
+  document.getElementById("cardCaro").hidden = !caro; document.getElementById("cardOverlay").hidden = caro;
   refresh();
 });
 window.app = { addBitmap, refresh, drawFrame, opts, slides: () => slides };   // 動作確認用
