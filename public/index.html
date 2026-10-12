@@ -9,11 +9,23 @@
 <link rel="icon" href="favicon.ico" sizes="48x48">
 <meta name="description" content="画像やPDFから、Xに投稿できるスライド動画(MP4)をブラウザだけで作る。送信なし・ローカルで完結。">
 <meta property="og:type" content="website">
+<meta property="og:url" content="https://slide-video-c0s.pages.dev/">
 <meta property="og:title" content="スライド動画メーカー">
 <meta property="og:description" content="画像やPDFから、Xに投稿できるスライド動画(MP4)をブラウザだけで。送信なし・ローカルで完結。">
+<!-- og:imageは正方形を1枚目に置く（多くのクローラーは1枚目だけを使い、小さい枠では中央を正方形に切り抜くため。
+     横長は2枚目）。Twitterはtwitter:image（別タグ）を見るので横長のまま表示される。画像は scripts/make_og_image.py で再生成できる -->
+<meta property="og:image" content="https://slide-video-c0s.pages.dev/og-image-square.png">
+<meta property="og:image:width" content="630">
+<meta property="og:image:height" content="630">
+<meta property="og:image:type" content="image/png">
+<meta property="og:image" content="https://slide-video-c0s.pages.dev/og-image-large.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:type" content="image/png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="スライド動画メーカー">
 <meta name="twitter:description" content="画像やPDFから、Xに投稿できるスライド動画(MP4)をブラウザだけで。送信なし・ローカルで完結。">
+<meta name="twitter:image" content="https://slide-video-c0s.pages.dev/og-image-large.png">
 <link rel="stylesheet" href="style.css?v=4">
 </head>
 <body>
