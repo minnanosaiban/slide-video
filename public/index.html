@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>スライド動画メーカー</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="icon" href="favicon.png" sizes="192x192">
+<link rel="icon" href="favicon.ico" sizes="48x48">
+<meta name="description" content="画像やPDFから、Xに投稿できるスライド動画(MP4)をブラウザだけで作る。送信なし・ローカルで完結。">
+<meta property="og:type" content="website">
+<meta property="og:title" content="スライド動画メーカー">
+<meta property="og:description" content="画像やPDFから、Xに投稿できるスライド動画(MP4)をブラウザだけで。送信なし・ローカルで完結。">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="スライド動画メーカー">
+<meta name="twitter:description" content="画像やPDFから、Xに投稿できるスライド動画(MP4)をブラウザだけで。送信なし・ローカルで完結。">
+<link rel="stylesheet" href="style.css?v=1">
+</head>
+<body>
+
+<!-- ヒーロー（sidenote・pdf-toolsと同じ構成）。「機能」ボタン群の場所に、動画のスタイル切り替えを置く -->
+<header class="hero">
+  <div class="hero-inner">
+    <div class="hero-left">
+      <h1 class="hero-title">スライド動画メーカー</h1>
+      <p class="hero-desc">画像・PDFを、X向けの動画に。</p>
+
+      <div class="hero-shortcuts">
+        <div class="hero-shortcuts-title">送信なし・ローカルで完結</div>
+        <ul>
+          <li>画像・PDFは外部へ送信されません</li>
+          <li>MP4(H.264・30fps・音声なし)で書き出します</li>
+          <li>Xの上限は2分20秒・512MBまで(通常のアカウント)</li>
+        </ul>
+      </div>
+
+      <div class="hero-theme-section">
+        <div class="hero-theme-head"><span class="hero-theme-title">スタイル</span></div>
+        <div class="theme-grid" id="styleGrid" role="tablist" aria-label="動画のスタイル">
+          <button type="button" class="theme-swatch selected" role="tab" data-style="carousel">カルーセル</button>
+          <button type="button" class="theme-swatch" role="tab" data-style="slide">1枚ずつ</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="hero-right">
+      <div class="browser-mock" aria-hidden="true">
+        <div class="browser-mock-bar">
+          <span class="dot dot-red"></span><span class="dot dot-yellow"></span><span class="dot dot-green"></span>
+          <span class="browser-mock-url">slide-video</span>
+        </div>
+        <div class="browser-mock-body">
+          <div class="mock-paper mock-carousel">
+            <div class="mock-slides"><div class="mock-slide side"></div><div class="mock-slide main"></div><div class="mock-slide side"></div></div>
+            <div class="mock-dots"><i></i><i class="on"></i><i></i><i></i><i></i></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="workspace">
+  <section class="tool-panel">
+    <h2 class="panel-title">① 画像・PDFを入れる</h2>
+    <p class="panel-lead">JPEG・PNG・WebP・PDFに対応。PDFは1ページ=1枚になります。複数まとめて入れられ、ファイル名順に並びます(あとで並べ替えできます)。</p>
+
+    <div class="card">
+      <label class="dropzone" id="drop">
+        <svg class="icon icon-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
+        <p>ここにドラッグ、またはクリックして選択<span class="dropzone-sub">画像・PDF(複数可)</span></p>
+        <input type="file" id="file" multiple accept="image/*,application/pdf">
+      </label>
+      <p class="status" id="loadMsg" style="margin-top:10px"></p>
+      <div id="thumbsCard" hidden>
+        <div class="thumb-grid" id="thumbs"></div>
+        <div class="toolbar" style="margin-top:14px">
+          <button type="button" class="btn-outline" id="clear" disabled>すべて消す</button>
+          <span class="cap" id="count">0枚</span>
+        </div>
+      </div>
+    </div>
+
+    <h2 class="panel-title" style="margin-top:16px">② 設定する</h2>
+    <div class="card">
+      <div class="toolbar">
+        <div class="field"><label for="size">サイズ</label>
+          <select class="text-input" id="size">
+            <option value="1280x720">横長 1280×720(おすすめ)</option>
+            <option value="1920x1080">横長 1920×1080(高画質)</option>
+            <option value="1080x1080">正方形 1080×1080</option>
+            <option value="1080x1920">縦長 1080×1920</option>
+          </select></div>
+        <div class="field"><label for="hold">1枚を見せる秒数</label><input class="text-input" type="number" id="hold" value="3" min="0.5" max="30" step="0.5"></div>
+        <div class="field"><label for="move">切り替えの秒数</label><input class="text-input" type="number" id="move" value="0.7" min="0.2" max="3" step="0.1"></div>
+        <div class="field"><label for="fit">画像のはめ方</label>
+          <select class="text-input" id="fit"><option value="cover">枠いっぱいに(はみ出しは切る)</option><option value="contain">全体を見せる(余白あり)</option></select></div>
+        <div class="field"><label for="bgc">背景色</label><input type="color" id="bgc" value="#f4f5f7"></div>
+      </div>
+      <div class="toolbar" style="margin-top:12px">
+        <label class="check"><input type="checkbox" id="loopback"> 最後に最初のスライドへ戻る(ループ再生向け)</label>
+        <label class="check" id="cardCaro"><input type="checkbox" id="dots" checked> ページ送りの点を出す</label>
+      </div>
+    </div>
+
+    <h2 class="panel-title" style="margin-top:16px">③ 確認して書き出す</h2>
+    <div class="card">
+      <div class="stage-video"><canvas id="cv" width="1280" height="720"></canvas></div>
+      <div class="toolbar" style="margin-top:14px">
+        <button type="button" class="btn-outline" id="play" disabled>▶ プレビュー</button>
+        <button type="button" class="btn-primary" id="make" disabled>MP4を作る</button>
+        <span id="dur"></span>
+        <button type="button" class="btn-outline" id="fit140" hidden>140秒以内に収める</button>
+      </div>
+      <progress id="prog" value="0" max="1" hidden></progress>
+      <p class="status" id="msg"></p>
+      <div id="out"></div>
+    </div>
+  </section>
+</main>
+
+<footer class="site-info" id="disclaimer">
+  <div class="card">
+    <div class="shead">■ このツールについて</div>
+    <p class="cap">※画像やPDFを、スライドが流れる動画(MP4)にするツールです。X(旧Twitter)への投稿を想定しています。</p>
+    <p class="cap">※ご意見・ご要望は作成者までご連絡ください。</p>
+    <a class="link" href="https://x.com/minnanosaiban" target="_blank" rel="noopener">@minnanosaiban</a>
+  </div>
+  <div class="card">
+    <div class="shead">■ 免責事項</div>
+    <p class="cap">※本ツールは無保証で提供されます(現状有姿)。処理はすべてお使いのブラウザ内で完結し、画像・PDFは外部送信されませんが、ご利用環境に起因する情報漏えいについて作成者は責任を負いません。</p>
+    <p class="cap">※本ツールの利用により生じたいかなる損害についても作成者は責任を負いません。投稿前に、動画の内容(個人情報・著作権)と出力結果を利用者の責任で確認してください。</p>
+    <p class="cap">※動画の書き出しにはChrome・Edgeの新しい版が必要です。投稿先の仕様(長さ・サイズ・形式)は変わることがあります。</p>
+  </div>
+</footer>
+
+<script type="module" src="app.js?v=1"></script>
+</body>
+</html>
