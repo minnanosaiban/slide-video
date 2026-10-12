@@ -76,7 +76,7 @@ function opts(){
   return {
     style: document.querySelector("#styleGrid .selected").dataset.style, W, H,
     hold: Math.max(.5, +$("hold").value || 3), move: Math.max(.2, +$("move").value || .7),
-    bg: $("bgc").value, fit: $("fit").value, loopback: $("loopback").checked, dots: $("dots").checked, bar: $("bar").checked, counter: $("counter").checked,
+    bg: $("bgc").value, fit: $("fit").value, loopback: $("loopback").checked, bar: $("bar").checked, counter: $("counter").checked,
   };
 }
 function totalDuration(o){
@@ -212,7 +212,7 @@ function drawFrame(t, o){
   // カルーセル(事件ページの見た目: 中央1.15倍・左右0.92倍で半透明、4.5秒ごとに右→左)
   const per = W >= H ? 2.2 : 1.3, gap = W * 0.025;
   const sw = (W - gap * (per - 1)) / per, sh = sw * 9 / 16;
-  const cy = H * (o.dots ? .47 : .5);
+  const cy = H * .5;
   const items = [];
   for(let i = 0; i < n; i++){
     let d = i - pos;
@@ -233,14 +233,6 @@ function drawFrame(t, o){
     ctx.shadowColor = "transparent";
     drawFit(ctx, slides[it.i].bitmap, cx - w / 2, cy - h / 2, w, h, o.fit, 14 * W / 1120);
     ctx.restore();
-  }
-  if(o.dots){   // ページ送りの点(Webページ風。多いときは30個に間引く)
-    const y = Math.min(H - W * .03, cy + sh * 1.15 / 2 + W * .045), r = W * .005, sp = r * 4;
-    const cur = Math.round(pos) % n, show = Math.min(n, 30), x0 = W / 2 - (show - 1) * sp / 2;
-    for(let i = 0; i < show; i++){
-      ctx.fillStyle = (n > 30 ? Math.floor(cur * 30 / n) : cur) === i ? "#b93226" : "#bdb8b0";
-      ctx.beginPath(); ctx.arc(x0 + i * sp, y, r, 0, Math.PI * 2); ctx.fill();
-    }
   }
 }
 
@@ -274,7 +266,7 @@ $("play").onclick = () => {
   };
   tick();
 };
-["size", "dots", "bar", "counter", "hold", "move", "bgc", "fit", "loopback"].forEach(id => $(id).addEventListener("change", refresh));
+["size", "bar", "counter", "hold", "move", "bgc", "fit", "loopback"].forEach(id => $(id).addEventListener("change", refresh));
 
 // ---------- 書き出し(WebCodecsでフレームごとにMP4へ) ----------
 async function pickCodec(W, H, fps, bitrate){
@@ -325,8 +317,7 @@ $("make").onclick = makeVideo;
 $("styleGrid").addEventListener("click", e => {
   const b = e.target.closest(".theme-swatch"); if(!b) return;
   document.querySelectorAll("#styleGrid .theme-swatch").forEach(x => x.classList.toggle("selected", x === b));
-  const caro = b.dataset.style === "carousel";
-  document.getElementById("cardCaro").hidden = !caro; document.getElementById("cardOverlay").hidden = caro;
+  document.getElementById("cardOverlay").hidden = b.dataset.style === "carousel";
   refresh();
 });
 window.app = { addBitmap, refresh, drawFrame, opts, slides: () => slides };   // 動作確認用
