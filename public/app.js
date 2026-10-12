@@ -134,6 +134,23 @@ function drawFull(t, pos, o){
     if(f > 0 && (i + 1 < n || o.loopback)) draw(i + 1, f);
     return;
   }
+  if(o.style === "cube"){
+    // キューブ回転: 箱が左へ90度回り、右の面(次のスライド)が正面に来る
+    const k = Math.min(Math.floor(pos), n - 1), p = pos - k;
+    const nx = (k + 1 < n || o.loopback) ? (k + 1) % n : -1;
+    if(p <= 0 || nx < 0){ drawImg(ctx, slides[k].bitmap, 0, 0, W, H, o.fit, 0, false); return; }
+    const a = p * Math.PI / 2, c = Math.cos(a), sn = Math.sin(a), sc = 1 / (c + sn) * (1 - .08 * Math.sin(2 * a));
+    const w1 = W * c * sc, w2 = W * sn * sc, fh = H * sc, x0 = (W - w1 - w2) / 2, y0 = (H - fh) / 2;
+    const face = (bm, x, w, shade) => {
+      if(w < 1) return;
+      ctx.save(); ctx.translate(x, y0); ctx.scale(w / W, fh / H); drawImg(ctx, bm, 0, 0, W, H, o.fit, 0, false); ctx.restore();
+      ctx.fillStyle = `rgba(0,0,0,${shade})`; ctx.fillRect(x, y0, w, fh);
+    };
+    ctx.save(); ctx.shadowColor = "rgba(0,0,0,.25)"; ctx.shadowBlur = W * .03; ctx.fillStyle = o.bg; ctx.fillRect(x0, y0, w1 + w2, fh); ctx.restore();
+    face(slides[k].bitmap, x0, w1, .3 * sn);
+    face(slides[nx].bitmap, x0 + w1, w2, .3 * c);
+    return;
+  }
   if(o.style === "curl" || o.style === "toss"){
     const k = Math.min(Math.floor(pos), n - 1), p = pos - k;
     const nx = (k + 1 < n || o.loopback) ? (k + 1) % n : -1;
