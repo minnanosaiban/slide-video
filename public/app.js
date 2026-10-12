@@ -76,7 +76,7 @@ function opts(){
   return {
     style: document.querySelector("#styleGrid .selected").dataset.style, W, H,
     hold: Math.max(.5, +$("hold").value || 3), move: Math.max(.2, +$("move").value || .7),
-    bg: $("bgc").value, fit: $("fit").value, loopback: $("loopback").checked, dots: $("dots").checked,
+    bg: $("bgc").value, fit: $("fit").value, loopback: $("loopback").checked, bar: $("bar").checked, counter: $("counter").checked,
   };
 }
 function totalDuration(o){
@@ -109,25 +109,72 @@ function drawFit(g, bm, x, y, w, h, fit, r){
   }
   g.restore();
 }
+// ---------- 全画面系スタイル(Xのタイムラインで大きく読める) ----------
+const wrapD = (d, n, loop) => { if(!loop) return d; if(d > n / 2) d -= n; if(d < -n / 2) d += n; return d; };
+// 余白を白でなく背景色のまま見せる版(全画面系の「全体を見せる」用)
+function drawImg(g, bm, x, y, w, h, fit, r, paper){
+  g.save();
+  g.beginPath(); g.roundRect(x, y, w, h, r); g.clip();
+  if(paper){ g.fillStyle = "#fff"; g.fillRect(x, y, w, h); }
+  const s = (fit === "cover" ? Math.max : Math.min)(w / bm.width, h / bm.height), dw = bm.width * s, dh = bm.height * s;
+  g.drawImage(bm, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
+  g.restore();
+}
+function drawFull(t, pos, o){
+  const { W, H } = o, n = slides.length, seg = o.hold + o.move;
+  if(o.style === "slide" || o.style === "zoom"){
+    const i = Math.floor(pos), f = pos - i;
+    const draw = (idx, a) => {
+      let z = 1;
+      if(o.style === "zoom"){ const u = Math.min(1, Math.max(0, (t - (idx * seg - o.move)) / (o.hold + 2 * o.move))); z = 1 + .06 * u; }
+      ctx.globalAlpha = a; ctx.save(); ctx.translate(W / 2, H / 2); ctx.scale(z, z); ctx.translate(-W / 2, -H / 2);
+      drawImg(ctx, slides[idx % n].bitmap, 0, 0, W, H, o.fit, 0, false); ctx.restore(); ctx.globalAlpha = 1;
+    };
+    draw(i, 1);
+    if(f > 0 && (i + 1 < n || o.loopback)) draw(i + 1, f);
+    return;
+  }
+  // push(横にすっと押し出す)・card(枠付きの1枚が横に流れる)
+  const card = o.style === "card", m = card ? Math.min(W, H) * .05 : 0;
+  for(let i = 0; i < n; i++){
+    const d = wrapD(i - pos, n, o.loopback);
+    if(Math.abs(d) >= 1) continue;
+    const x = d * W;
+    if(card){
+      ctx.save(); ctx.shadowColor = "rgba(0,0,0,.18)"; ctx.shadowBlur = W * .02; ctx.shadowOffsetY = W * .006;
+      ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.roundRect(x + m, m, W - 2 * m, H - 2 * m, W * .012); ctx.fill(); ctx.restore();
+      drawImg(ctx, slides[i].bitmap, x + m, m, W - 2 * m, H - 2 * m, o.fit, W * .012, true);
+    }else drawImg(ctx, slides[i].bitmap, x, 0, W, H, o.fit, 0, false);
+  }
+}
+// 進捗バーとページ番号(全画面系のみ。動画を途中から見た人にも位置が分かる)
+function drawOverlay(t, pos, o){
+  const { W, H } = o, n = slides.length;
+  if(o.counter){
+    const cur = Math.round(pos) % n, txt = `${cur + 1} / ${n}`, fs = Math.round(Math.min(W, H) * .036);
+    ctx.save(); ctx.font = `700 ${fs}px "Source Sans Pro", system-ui, sans-serif`;
+    const pw = ctx.measureText(txt).width + fs * 1.2, ph = fs * 1.7, x = W - pw - fs * .9, y = fs * .9;
+    ctx.fillStyle = "rgba(0,0,0,.55)"; ctx.beginPath(); ctx.roundRect(x, y, pw, ph, ph / 2); ctx.fill();
+    ctx.fillStyle = "#fff"; ctx.textBaseline = "middle"; ctx.textAlign = "center"; ctx.fillText(txt, x + pw / 2, y + ph / 2 + 1);
+    ctx.restore();
+  }
+  if(o.bar){
+    const bh = Math.max(6, Math.round(H * .009)), total = totalDuration(o) || 1;
+    ctx.fillStyle = "rgba(0,0,0,.14)"; ctx.fillRect(0, H - bh, W, bh);
+    ctx.fillStyle = "#b93226"; ctx.fillRect(0, H - bh, W * Math.min(1, t / total), bh);
+  }
+}
 function drawFrame(t, o){
   const { W, H } = o, n = slides.length;
   if(cv.width !== W || cv.height !== H){ cv.width = W; cv.height = H; }
   ctx.fillStyle = o.bg; ctx.fillRect(0, 0, W, H);
   if(!n) return;
   const pos = position(t, o);
-  if(o.style === "slide"){
-    const i = Math.floor(pos), f = pos - i;
-    const draw = (idx, a) => { ctx.globalAlpha = a; drawFit(ctx, slides[idx % n].bitmap, 0, 0, W, H, o.fit === "cover" ? "cover" : "contain", 0); ctx.globalAlpha = 1; };
-    // contain のときの余白は背景色で見せる
-    if(o.fit === "contain"){ ctx.fillStyle = o.bg; ctx.fillRect(0, 0, W, H); }
-    draw(i, 1);
-    if(f > 0 && (i + 1 < n || o.loopback)) draw(i + 1, f);
-    return;
-  }
+  if(o.style !== "carousel"){ drawFull(t, pos, o); drawOverlay(t, pos, o); return; }
   // カルーセル(事件ページの見た目: 中央1.15倍・左右0.92倍で半透明、4.5秒ごとに右→左)
   const per = W >= H ? 2.2 : 1.3, gap = W * 0.025;
   const sw = (W - gap * (per - 1)) / per, sh = sw * 9 / 16;
-  const cy = H * (o.dots ? .47 : .5);
+  const cy = H * .5;
   const items = [];
   for(let i = 0; i < n; i++){
     let d = i - pos;
@@ -148,15 +195,6 @@ function drawFrame(t, o){
     ctx.shadowColor = "transparent";
     drawFit(ctx, slides[it.i].bitmap, cx - w / 2, cy - h / 2, w, h, o.fit, 14 * W / 1120);
     ctx.restore();
-  }
-  if(o.dots){
-    const y = Math.min(H - W * .03, cy + sh * 1.15 / 2 + W * .045), r = W * .005, sp = r * 4;
-    const cur = Math.round(pos) % n;
-    const show = Math.min(n, 30), x0 = W / 2 - (show - 1) * sp / 2;
-    for(let i = 0; i < show; i++){
-      ctx.fillStyle = (n > 30 ? Math.floor(cur * 30 / n) : cur) === i ? "#b93226" : "#bdb8b0";
-      ctx.beginPath(); ctx.arc(x0 + i * sp, y, r, 0, Math.PI * 2); ctx.fill();
-    }
   }
 }
 
@@ -190,7 +228,7 @@ $("play").onclick = () => {
   };
   tick();
 };
-["size", "hold", "move", "bgc", "fit", "loopback", "dots"].forEach(id => $(id).addEventListener("change", refresh));
+["size", "bar", "counter", "hold", "move", "bgc", "fit", "loopback"].forEach(id => $(id).addEventListener("change", refresh));
 
 // ---------- 書き出し(WebCodecsでフレームごとにMP4へ) ----------
 async function pickCodec(W, H, fps, bitrate){
@@ -241,8 +279,8 @@ $("make").onclick = makeVideo;
 $("styleGrid").addEventListener("click", e => {
   const b = e.target.closest(".theme-swatch"); if(!b) return;
   document.querySelectorAll("#styleGrid .theme-swatch").forEach(x => x.classList.toggle("selected", x === b));
-  document.getElementById("cardCaro").hidden = b.dataset.style !== "carousel";
+  document.getElementById("cardOverlay").hidden = b.dataset.style === "carousel";
   refresh();
 });
-window.app = { addBitmap, refresh, slides: () => slides };   // 動作確認用
+window.app = { addBitmap, refresh, drawFrame, opts, slides: () => slides };   // 動作確認用
 refresh();
